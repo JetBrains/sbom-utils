@@ -5,12 +5,16 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Authors>Konstantin Kretov</Authors>
-        <Copyright>(C) JetBrains s.r.o</Copyright>
+        <Copyright>(C) 2024 JetBrains s.r.o</Copyright>
         <PackageProjectUrl>https://github.com/JetBrains/sbom-utils</PackageProjectUrl>
         <RepositoryUrl>https://github.com/JetBrains/sbom-utils</RepositoryUrl>
         <Company>JetBrains s.r.o</Company>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <LangVersion>10</LangVersion>
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
+        <Description>Tool to check that the installed software complies with the provided SBOM document</Description>
+        <PackageTags>JetBrains sbom spdx netstandard</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

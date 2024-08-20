@@ -19,10 +19,10 @@ class Program
     static async Task<int> Main(string[] args)
     {
         RootCommand rootCommand = new RootCommand(
-            description: "Analyses that installed software matches the SBOM.");
+            description: "Analyze that the installed software complies with the SBOM.");
 
-        var analyzeSingle = new Command("analyze", "Analyzes that installed software matches the SBOM.");
-        var analyzeBatch = new Command("analyze-batch", "Analyzes that installed software from provided json match the SBOM.");
+        var analyzeSingle = new Command("analyze", "Analyze that the installed software complies with the SBOM.");
+        var analyzeBatch = new Command("analyze-batch", "Analyze that all installed software in the provided json complies with the SBOM.");
 
         rootCommand.AddCommand(analyzeSingle);
         rootCommand.AddCommand(analyzeBatch);
@@ -50,7 +50,7 @@ class Program
         };
 
         var exemptionsOption = new Option<string[]>(
-            aliases: ["--exclude", "-e"],
+            aliases: ["--ignore", "-i"],
             description: "Files and file patterns to ignore.")
         {
             Arity = ArgumentArity.ZeroOrMore,
