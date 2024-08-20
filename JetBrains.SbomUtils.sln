@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JetBrains.SbomUtils", "JetBrains.SbomUtils\src\JetBrains.SbomUtils\JetBrains.SbomUtils.csproj", "{DB56864E-2C0A-4FE2-B56F-6CFE632B37AF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JetBrains.SbomUtils.Console", "JetBrains.SbomUtils\src\JetBrains.SbomUtils.Console\JetBrains.SbomUtils.Console.csproj", "{3F94F647-4055-41F0-86AD-62725630DEB6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JetBrains.SbomUtils.Tests", "JetBrains.SbomUtils\tests\JetBrains.SbomUtils.Tests.csproj", "{ECA9EC9C-4879-4436-BEC2-42B5B9CAD36B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DB56864E-2C0A-4FE2-B56F-6CFE632B37AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB56864E-2C0A-4FE2-B56F-6CFE632B37AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB56864E-2C0A-4FE2-B56F-6CFE632B37AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB56864E-2C0A-4FE2-B56F-6CFE632B37AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F94F647-4055-41F0-86AD-62725630DEB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F94F647-4055-41F0-86AD-62725630DEB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F94F647-4055-41F0-86AD-62725630DEB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F94F647-4055-41F0-86AD-62725630DEB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECA9EC9C-4879-4436-BEC2-42B5B9CAD36B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECA9EC9C-4879-4436-BEC2-42B5B9CAD36B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECA9EC9C-4879-4436-BEC2-42B5B9CAD36B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECA9EC9C-4879-4436-BEC2-42B5B9CAD36B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
