@@ -11,11 +11,15 @@ namespace JetBrains.SbomUtils
   {
     private readonly ILogger _logger;
     private readonly SbomOperations _sbomOperations;
+    private readonly IDiskOperations _diskOperations;
 
-    public SbomValidator(ILogger logger)
+    public SbomValidator(ILogger logger): this(logger, new SbomOperations(logger), new DiskOperations()) { }
+
+    internal SbomValidator(ILogger logger, SbomOperations sbomOperations, IDiskOperations diskOperations)
     {
       _logger = logger;
-      _sbomOperations = new SbomOperations(_logger);
+      _sbomOperations = sbomOperations;
+      _diskOperations = diskOperations;
     }
 
     public ValidationResult ValidateInstallation(SbomModel sbomModel, string pathToInstallation, ICollection<string> rootPackageNames, ICollection<string> exceptions)
@@ -39,10 +43,10 @@ namespace JetBrains.SbomUtils
         productPackages = sbomModel.Packages.Values;
       }
 
-      _logger.LogDebug("{count} dependant packages were collected", productPackages.Count);
+      _logger.LogDebug("{count} dependent packages were collected", productPackages.Count);
 
       var packagesHashSet = productPackages.ToHashSet();
-      var installationFiles = GetFilesFromInstallationDirectory(pathToInstallation, exceptions, out var ignoredFiles);
+      var (installationFiles, ignoredFiles) = _diskOperations.GetFilesFromInstallationDirectory(pathToInstallation, exceptions);
 
       ConcurrentBag<MissingFile> missingFiles = new ConcurrentBag<MissingFile>();
       ConcurrentBag<FileVerificationResult> fileVerificationResults = new ConcurrentBag<FileVerificationResult>();
@@ -90,7 +94,7 @@ namespace JetBrains.SbomUtils
       var filesFromReferencedPackages = sbomFiles.Where(f => packagesHashSet.Contains(f.Package)).ToList();
       var hashAlgorithms = sbomFiles.SelectMany(f => f.File.Checksums).Select(c => c.Algorithm).Distinct();
 
-      var hashesDictionary = CalculateHashes(installationFile, hashAlgorithms);
+      var hashesDictionary = _diskOperations.CalculateHashes(installationFile, hashAlgorithms);
 
       if (filesFromReferencedPackages.Any())
       {
@@ -128,22 +132,6 @@ namespace JetBrains.SbomUtils
       }
     }
 
-    protected Dictionary<ChecksumAlgorithm, byte[]> CalculateHashes(string installationFile, IEnumerable<ChecksumAlgorithm> algorithms)
-    {
-      Dictionary<ChecksumAlgorithm, byte[]> hashes = new Dictionary<ChecksumAlgorithm, byte[]>();
-
-      using (var file = System.IO.File.OpenRead(installationFile))
-      {
-        foreach (var algorithm in algorithms)
-        {
-          var hashOnDisk = CreateHashAlgorithm(algorithm).WithDispose(a => a.ComputeHash(file.Rewind()));
-          hashes.Add(algorithm, hashOnDisk);
-        }
-      }
-
-      return hashes;
-    }
-
     protected HashVerificationFailure? ValidateHashes(Dictionary<ChecksumAlgorithm, byte[]> fileHashes, FileInfo fileInfo)
     {
       List<HashMismatch> mismatches = new List<HashMismatch>(fileInfo.File.Checksums.Count);
@@ -175,50 +163,6 @@ namespace JetBrains.SbomUtils
         result[i] = byte.Parse(hash[new Range(i * 2, i * 2 + 2)], NumberStyles.HexNumber);
 
       return result;
-    }
-
-    protected HashAlgorithm CreateHashAlgorithm(ChecksumAlgorithm algorithm) => algorithm switch
-    {
-      ChecksumAlgorithm.SHA1 => SHA1.Create(),
-      ChecksumAlgorithm.SHA256 => SHA256.Create(),
-      ChecksumAlgorithm.SHA384 => SHA384.Create(),
-      ChecksumAlgorithm.SHA512 => SHA512.Create(),
-      _ => throw new NotSupportedException($"Hash algorithm {algorithm} is not supported"),
-    };
-
-    protected string[] GetFilesFromInstallationDirectory(string installationPath, IEnumerable<string> exemptions, out ICollection<string> ignoredFiles)
-    {
-      var allFiles = Directory.GetFiles(installationPath, "*", new EnumerationOptions() { RecurseSubdirectories = true }).Select(Path.GetFullPath).ToHashSet();
-      ignoredFiles = new List<string>();
-
-      string[] recursiveDirectoryPatterns = new string[] { "*/", "*\\", "**/", "**\\" };
-
-      foreach (var exemptionPattern in exemptions)
-      {
-        var pattern = exemptionPattern;
-        bool recurseSubdirectories = false;
-
-        foreach (var recursiveDirectoryPattern in recursiveDirectoryPatterns)
-        {
-          if (exemptionPattern.StartsWith(recursiveDirectoryPattern))
-          {
-            recurseSubdirectories = true;
-            pattern = exemptionPattern.Substring(recursiveDirectoryPattern.Length);
-            break;
-          }
-        }
-
-        var exemptedFiles = Directory.GetFiles(installationPath, pattern, new EnumerationOptions() { RecurseSubdirectories = recurseSubdirectories });
-
-        foreach (var exemptedFile in exemptedFiles)
-        {
-          var fullPath = Path.GetFullPath(exemptedFile);
-          if (allFiles.Remove(fullPath))
-            ignoredFiles.Add(Path.GetRelativePath(installationPath, fullPath));
-        }
-      }
-
-      return allFiles.ToArray();
     }
   }
 }
