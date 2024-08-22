@@ -67,9 +67,19 @@ public class SbomLoadTests
     Assert.That(spdxModel.RelationshipsBySourceElement.TryGetValue(file2.SPDXID, out _), Is.False);
 
     Assert.That(spdxModel.FilesDictionaryByFileName.TryGetValue("test.txt", out var filesWithTheSameName), Is.True);
-    Assert.That(filesWithTheSameName, Has.Count.EqualTo(2));
+    Assert.That(filesWithTheSameName, Has.Count.EqualTo(3));
     Assert.That(filesWithTheSameName[0].File.SPDXID, Is.EqualTo(file1.SPDXID));
-    Assert.That(filesWithTheSameName[1].File.SPDXID, Is.EqualTo(file3.SPDXID));
+    Assert.That(filesWithTheSameName[1].File.SPDXID, Is.EqualTo(file2.SPDXID));
+    Assert.That(filesWithTheSameName[2].File.SPDXID, Is.EqualTo(file3.SPDXID));
+
+    Assert.That(spdxModel.FilesDictionaryByRelativePath.TryGetValue("test.txt", out var filesTest), Is.True);
+    Assert.That(filesTest, Has.Count.EqualTo(2));
+    Assert.That(filesTest[0].File.SPDXID, Is.EqualTo(file1.SPDXID));
+    Assert.That(filesTest[1].File.SPDXID, Is.EqualTo(file3.SPDXID));
+
+    Assert.That(spdxModel.FilesDictionaryByRelativePath.TryGetValue(SbomHelper.NormalizePath("tmp/test.txt"), out var filesTmpTest), Is.True);
+    Assert.That(filesTmpTest, Has.Count.EqualTo(1));
+    Assert.That(filesTmpTest[0].File.SPDXID, Is.EqualTo(file2.SPDXID));
   }
 
   [Test]

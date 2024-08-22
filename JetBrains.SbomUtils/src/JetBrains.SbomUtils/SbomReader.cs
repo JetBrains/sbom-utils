@@ -114,8 +114,8 @@ namespace JetBrains.SbomUtils
         new ReadOnlyDictionary<string, File>(filesDict),
         new ReadOnlyDictionary<string, List<Relationship>>(relationshipsBySourceElement),
         new ReadOnlyDictionary<string, List<Relationship>>(relationshipsByDestinationElement),
-        new ReadOnlyDictionary<string, List<FileInfo>>(filesDictionaryByFileName),
-        new ReadOnlyDictionary<string, List<FileInfo>>(filesDictionaryByRelativePath));
+        new ReadOnlyDictionary<string, List<FileInfo>>(filesDictionaryByRelativePath),
+        new ReadOnlyDictionary<string, List<FileInfo>>(filesDictionaryByFileName));
 
       return sbomModel;
     }

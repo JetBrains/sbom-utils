@@ -68,4 +68,11 @@ public static class SbomHelper
       RelatedSpdxElement = file.SPDXID,
       RelationshipType = RelationshipType.CONTAINS,
     };
+
+
+  public static string NormalizePath(string path)
+  {
+    var tempPath = Path.GetTempPath();
+    return Path.GetRelativePath(tempPath, Path.GetFullPath(path, tempPath));
+  }
 }

@@ -1,69 +1,43 @@
-using System.Security.Cryptography;
 using JetBrains.SbomUtils.Models;
 
 namespace JetBrains.SbomUtils;
 
 public class DiskOperations : IDiskOperations
 {
-  public (string[] Files, ICollection<string> IgnoredFiles) GetFilesFromInstallationDirectory(string installationPath, IEnumerable<string> exemptions)
+  public string RootPath { get; private set; }
+
+  public static bool IsSupported(string path) => Directory.Exists(path);
+
+  public DiskOperations(string path)
   {
-    var allFiles = Directory.GetFiles(installationPath, "*", new EnumerationOptions() { RecurseSubdirectories = true })
-      .Select(Path.GetFullPath).ToHashSet();
-    var ignoredFiles = new List<string>();
+    RootPath = path;
+  }
 
-    string[] recursiveDirectoryPatterns = new string[] { "*/", "*\\", "**/", "**\\" };
+  public (ICollection<string> Files, ICollection<string> IgnoredFiles) GetFilesFromInstallationDirectory(IEnumerable<string> exemptions)
+  {
+    var allFiles = Directory.GetFiles(RootPath, "*", new EnumerationOptions() { RecurseSubdirectories = true });
 
-    foreach (var exemptionPattern in exemptions)
+    List<string> files = new();
+    List<string> ignoredFiles = new();
+
+    var ignoreRegexes = IgnorePatternUtils.CompileIgnorePatterns(exemptions);
+
+    foreach (var file in allFiles)
     {
-      var pattern = exemptionPattern;
-      bool recurseSubdirectories = false;
+      var normalizedPath = Utils.NormalizePath(file);
 
-      foreach (var recursiveDirectoryPattern in recursiveDirectoryPatterns)
-      {
-        if (exemptionPattern.StartsWith(recursiveDirectoryPattern))
-        {
-          recurseSubdirectories = true;
-          pattern = exemptionPattern.Substring(recursiveDirectoryPattern.Length);
-          break;
-        }
-      }
-
-      var exemptedFiles = Directory.GetFiles(installationPath, pattern,
-        new EnumerationOptions() { RecurseSubdirectories = recurseSubdirectories });
-
-      foreach (var exemptedFile in exemptedFiles)
-      {
-        var fullPath = Path.GetFullPath(exemptedFile);
-        if (allFiles.Remove(fullPath))
-          ignoredFiles.Add(Path.GetRelativePath(installationPath, fullPath));
-      }
+      if (IgnorePatternUtils.IsIgnored(normalizedPath, ignoreRegexes))
+        ignoredFiles.Add(normalizedPath);
+      else
+        files.Add(normalizedPath);
     }
 
-    return (allFiles.ToArray(), ignoredFiles);
+    return (files, ignoredFiles);
   }
 
   public Dictionary<ChecksumAlgorithm, byte[]> CalculateHashes(string installationFile, IEnumerable<ChecksumAlgorithm> algorithms)
   {
-    Dictionary<ChecksumAlgorithm, byte[]> hashes = new Dictionary<ChecksumAlgorithm, byte[]>();
-
-    using (var file = System.IO.File.OpenRead(installationFile))
-    {
-      foreach (var algorithm in algorithms)
-      {
-        var hashOnDisk = CreateHashAlgorithm(algorithm).WithDispose(a => a.ComputeHash(file.Rewind()));
-        hashes.Add(algorithm, hashOnDisk);
-      }
-    }
-
-    return hashes;
+    using var file = System.IO.File.OpenRead(Path.Combine(RootPath, installationFile));
+    return HashCalculator.ComputeHashes(file, algorithms);
   }
-
-  protected static HashAlgorithm CreateHashAlgorithm(ChecksumAlgorithm algorithm) => algorithm switch
-  {
-    ChecksumAlgorithm.SHA1 => SHA1.Create(),
-    ChecksumAlgorithm.SHA256 => SHA256.Create(),
-    ChecksumAlgorithm.SHA384 => SHA384.Create(),
-    ChecksumAlgorithm.SHA512 => SHA512.Create(),
-    _ => throw new NotSupportedException($"Hash algorithm {algorithm} is not supported"),
-  };
 }

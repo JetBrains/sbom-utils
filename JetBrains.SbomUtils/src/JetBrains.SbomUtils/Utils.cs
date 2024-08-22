@@ -6,6 +6,8 @@ namespace JetBrains.SbomUtils
 {
   public static class Utils
   {
+    static readonly string _tempPath = Path.GetTempPath();
+
     [DebuggerStepThrough]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static R WithDispose<T, R>(this T disposable, Func<T, R> F) where T : IDisposable
@@ -15,7 +17,7 @@ namespace JetBrains.SbomUtils
         return F(disposable);
       }
     }
-  
+
     [DebuggerStepThrough]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static async Task<R> WithDisposeAsync<T, R>(this T disposable, Func<T, Task<R>> F) where T : IDisposable
@@ -25,7 +27,7 @@ namespace JetBrains.SbomUtils
         return await F(disposable);
       }
     }
-  
+
     /// <summary>
     /// <para>Rewinds the stream to the beginning so that it could be reused for reading.</para>
     /// <para>For example, this should be done to a <see cref="MemoryStream"/> after writing and before each reading.</para>
@@ -41,10 +43,16 @@ namespace JetBrains.SbomUtils
 
       return thіs;
     }
-  
+
     public static bool ByteArraysEqual(ReadOnlySpan<byte> a1, ReadOnlySpan<byte> a2)
     {
       return a1.SequenceEqual(a2);
+    }
+
+    public static string NormalizePath(string path)
+    {
+
+      return Path.GetRelativePath(_tempPath, Path.GetFullPath(path, _tempPath));
     }
   }
 }

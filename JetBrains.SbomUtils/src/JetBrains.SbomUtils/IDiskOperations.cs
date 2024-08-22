@@ -4,7 +4,7 @@ namespace JetBrains.SbomUtils;
 
 public interface IDiskOperations
 {
-  (string[] Files, ICollection<string> IgnoredFiles) GetFilesFromInstallationDirectory(string installationPath, IEnumerable<string> exemptions);
+  (ICollection<string> Files, ICollection<string> IgnoredFiles) GetFilesFromInstallationDirectory(IEnumerable<string> exemptions);
 
   Dictionary<ChecksumAlgorithm, byte[]> CalculateHashes(string installationFile, IEnumerable<ChecksumAlgorithm> algorithms);
 }

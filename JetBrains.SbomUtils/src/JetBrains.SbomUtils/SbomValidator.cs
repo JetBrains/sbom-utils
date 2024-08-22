@@ -11,18 +11,16 @@ namespace JetBrains.SbomUtils
   {
     private readonly ILogger _logger;
     private readonly SbomOperations _sbomOperations;
-    private readonly IDiskOperations _diskOperations;
 
-    public SbomValidator(ILogger logger): this(logger, new SbomOperations(logger), new DiskOperations()) { }
+    public SbomValidator(ILogger logger): this(logger, new SbomOperations(logger)) { }
 
-    internal SbomValidator(ILogger logger, SbomOperations sbomOperations, IDiskOperations diskOperations)
+    internal SbomValidator(ILogger logger, SbomOperations sbomOperations)
     {
       _logger = logger;
       _sbomOperations = sbomOperations;
-      _diskOperations = diskOperations;
     }
 
-    public ValidationResult ValidateInstallation(SbomModel sbomModel, string pathToInstallation, ICollection<string> rootPackageNames, ICollection<string> exceptions)
+    public ValidationResult ValidateInstallation(SbomModel sbomModel, IDiskOperations diskOperations, ICollection<string> rootPackageNames, ICollection<string> exceptions)
     {
       if (sbomModel == null)
         throw new InvalidOperationException("Load an spdx document first");
@@ -46,42 +44,39 @@ namespace JetBrains.SbomUtils
       _logger.LogDebug("{count} dependent packages were collected", productPackages.Count);
 
       var packagesHashSet = productPackages.ToHashSet();
-      var (installationFiles, ignoredFiles) = _diskOperations.GetFilesFromInstallationDirectory(pathToInstallation, exceptions);
+      var (installationFiles, ignoredFiles) = diskOperations.GetFilesFromInstallationDirectory(exceptions);
 
       ConcurrentBag<MissingFile> missingFiles = new ConcurrentBag<MissingFile>();
       ConcurrentBag<FileVerificationResult> fileVerificationResults = new ConcurrentBag<FileVerificationResult>();
 
       ParallelOptions parallelOptions = new ParallelOptions()
       {
-        MaxDegreeOfParallelism = 10,
+        MaxDegreeOfParallelism = 1,
       };
 
       Parallel.ForEach(installationFiles, parallelOptions, (installationFile, token) =>
       {
-        var relativeFilePath = Path.GetRelativePath(pathToInstallation, installationFile);
-
-        if (sbomModel.FilesDictionaryByRelativePath.TryGetValue(relativeFilePath, out var sbomFiles))
+        if (sbomModel.FilesDictionaryByRelativePath.TryGetValue(installationFile, out var sbomFiles))
         {
-          var fileValidationResult = ValidateFile(installationFile, sbomFiles, packagesHashSet);
+          var fileValidationResult = ValidateFile(diskOperations, installationFile, sbomFiles, packagesHashSet);
 
           fileVerificationResults.Add(fileValidationResult);
         }
         else
         {
           var fileName = Path.GetFileName(installationFile);
-          var relativePath = Path.GetRelativePath(pathToInstallation, installationFile);
 
           if (sbomModel.FilesDictionaryByFileName.TryGetValue(fileName, out var filesFromAnotherPackages))
-            missingFiles.Add(new MissingFile(relativePath, filesFromAnotherPackages));
+            missingFiles.Add(new MissingFile(installationFile, filesFromAnotherPackages));
           else
-            missingFiles.Add(new MissingFile(relativePath, Array.Empty<FileInfo>()));
+            missingFiles.Add(new MissingFile(installationFile, Array.Empty<FileInfo>()));
         }
       });
 
       var validationResult = new ValidationResult(
         success: !(missingFiles.Any() || fileVerificationResults.Any(f => !f.Success)),
         errorMessage: null,
-        filesChecked: installationFiles.Length,
+        filesChecked: installationFiles.Count,
         ignoredFiles: ignoredFiles,
         filesMissingInSbom: missingFiles.ToArray(),
         fileVerificationResults: fileVerificationResults.ToArray());
@@ -89,12 +84,12 @@ namespace JetBrains.SbomUtils
       return validationResult;
     }
 
-    private FileVerificationResult ValidateFile(string installationFile, List<FileInfo> sbomFiles, HashSet<Package> packagesHashSet)
+    private FileVerificationResult ValidateFile(IDiskOperations diskOperations, string installationFile, List<FileInfo> sbomFiles, HashSet<Package> packagesHashSet)
     {
       var filesFromReferencedPackages = sbomFiles.Where(f => packagesHashSet.Contains(f.Package)).ToList();
       var hashAlgorithms = sbomFiles.SelectMany(f => f.File.Checksums).Select(c => c.Algorithm).Distinct();
 
-      var hashesDictionary = _diskOperations.CalculateHashes(installationFile, hashAlgorithms);
+      var hashesDictionary = diskOperations.CalculateHashes(installationFile, hashAlgorithms);
 
       if (filesFromReferencedPackages.Any())
       {

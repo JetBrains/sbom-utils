@@ -30,22 +30,23 @@ public class VerificationTests
     var spdxModel = reader.LoadSbom(document);
     Mock<IDiskOperations> diskOperationsMock = new Mock<IDiskOperations>(MockBehavior.Strict);
     var rootPath = Path.GetTempPath();
-    diskOperationsMock.Setup(d => d.GetFilesFromInstallationDirectory(It.Is<string>(p => p == rootPath), It.IsAny<IEnumerable<string>>()))
-      .Returns(([Path.Combine(rootPath,file1.FileName)], Array.Empty<string>()));
+
+    diskOperationsMock.Setup(d => d.GetFilesFromInstallationDirectory(It.IsAny<IEnumerable<string>>()))
+      .Returns(([SbomHelper.NormalizePath(file1.FileName)], Array.Empty<string>()));
 
     diskOperationsMock
       .Setup(d => d.CalculateHashes(
-        It.Is<string>(p => p == Path.Combine(rootPath, file1.FileName)),
+        It.Is<string>(p => p == SbomHelper.NormalizePath(file1.FileName)),
         It.IsAny<IEnumerable<ChecksumAlgorithm>>()))
       .Returns(new Dictionary<ChecksumAlgorithm, byte[]>()
       {
         { ChecksumAlgorithm.SHA1, [0x00, 0x11, 0x22, 0x33, 0x44] }
       });
 
-    SbomValidator validator = new SbomValidator(logger, new SbomOperations(logger), diskOperationsMock.Object);
+    SbomValidator validator = new SbomValidator(logger, new SbomOperations(logger));
 
     //Act
-    var validationResult = validator.ValidateInstallation(spdxModel, rootPath, new List<string>() { package1.Name }, Array.Empty<string>());
+    var validationResult = validator.ValidateInstallation(spdxModel, diskOperationsMock.Object, new List<string>() { package1.Name }, Array.Empty<string>());
 
     //Assert
     Assert.That(validationResult.Success, Is.True);
