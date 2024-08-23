@@ -29,7 +29,9 @@ public static class IgnorePatternUtils
 
     foreach (string pattern in ignorePatterns)
     {
-      var patternWithProperSeparator = pattern.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+      var patternWithProperSeparator = Path.DirectorySeparatorChar == '\\' ?
+        pattern.Replace('/', Path.DirectorySeparatorChar) :
+        pattern.Replace('\\', Path.DirectorySeparatorChar);
 
       var currentDirectory = $".{Path.DirectorySeparatorChar}";
       if (patternWithProperSeparator.StartsWith(currentDirectory))
