@@ -8,13 +8,13 @@ namespace JetBrains.SbomUtils
 
     public int FilesChecked { get; }
 
-    public ICollection<string> IgnoredFiles { get; }
+    public string[] IgnoredFiles { get; }
 
-    public ICollection<MissingFile> FilesMissingInSbom { get; }
+    public MissingFile[] FilesMissingInSbom { get; }
 
-    public ICollection<FileVerificationResult> FileVerificationResults { get; }
+    public FileVerificationResult[] FileVerificationResults { get; }
 
-    public ValidationResult(bool success, string? errorMessage, int filesChecked, ICollection<string> ignoredFiles, ICollection<MissingFile> filesMissingInSbom, ICollection<FileVerificationResult> fileVerificationResults)
+    public ValidationResult(bool success, string? errorMessage, int filesChecked, string[] ignoredFiles, MissingFile[] filesMissingInSbom, FileVerificationResult[] fileVerificationResults)
     {
       Success = success;
       FilesChecked = filesChecked;

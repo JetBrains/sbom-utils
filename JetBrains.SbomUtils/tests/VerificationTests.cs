@@ -28,14 +28,13 @@ public class VerificationTests
     SbomReader reader = new SbomReader(logger);
 
     var spdxModel = reader.LoadSbom(document);
-    Mock<IDiskOperations> diskOperationsMock = new Mock<IDiskOperations>(MockBehavior.Strict);
-    var rootPath = Path.GetTempPath();
+    Mock<IInstalledSoftwareProvider> diskOperationsMock = new Mock<IInstalledSoftwareProvider>(MockBehavior.Strict);
 
-    diskOperationsMock.Setup(d => d.GetFilesFromInstallationDirectory(It.IsAny<IEnumerable<string>>()))
+    diskOperationsMock.Setup(d => d.GetFiles(It.IsAny<IEnumerable<string>>()))
       .Returns(([SbomHelper.NormalizePath(file1.FileName)], Array.Empty<string>()));
 
     diskOperationsMock
-      .Setup(d => d.CalculateHashes(
+      .Setup(d => d.CalculateFileHashes(
         It.Is<string>(p => p == SbomHelper.NormalizePath(file1.FileName)),
         It.IsAny<IEnumerable<ChecksumAlgorithm>>()))
       .Returns(new Dictionary<ChecksumAlgorithm, byte[]>()

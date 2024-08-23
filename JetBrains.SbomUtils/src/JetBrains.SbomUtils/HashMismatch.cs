@@ -17,9 +17,9 @@ namespace JetBrains.SbomUtils
   public class HashVerificationFailure
   {
     public FileInfo FileInfo { get; }
-    public IEnumerable<HashMismatch> HashMismatches { get; }
+    public HashMismatch[] HashMismatches { get; }
 
-    public HashVerificationFailure(FileInfo fileInfo, IEnumerable<HashMismatch> hashMismatches)
+    public HashVerificationFailure(FileInfo fileInfo, HashMismatch[] hashMismatches)
     {
       FileInfo = fileInfo;
       HashMismatches = hashMismatches;

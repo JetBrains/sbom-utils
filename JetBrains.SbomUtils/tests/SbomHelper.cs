@@ -42,6 +42,14 @@ public static class SbomHelper
 
   public record RelationshipTemplate(string FromId, string ToId);
 
+  public static Relationship DependsOn(this Package fromPackage, Package toPackage) =>
+    new Relationship()
+    {
+      SpdxElementId = fromPackage.SPDXID,
+      RelatedSpdxElement = toPackage.SPDXID,
+      RelationshipType = RelationshipType.DEPENDS_ON,
+    };
+
   public static RelationshipTemplate RelatedTo(this Package fromPackage, Package toPackage) =>
     new RelationshipTemplate(fromPackage.SPDXID, toPackage.SPDXID);
 

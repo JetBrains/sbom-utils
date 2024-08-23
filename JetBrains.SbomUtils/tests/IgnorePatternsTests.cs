@@ -36,7 +36,7 @@ public class IgnorePatternsTests
   [TestCase("dir/test.txt", "dir\\test2.*")]
   [TestCase("dir/dir2/test.txt", "dir/*.txt")]
   [TestCase("dir/test.txt", "dir/**/*.txt")]
-  public void FilesThatDontMatchIgnorePatternShouldntBeIgnored(string path, string ignorePattern)
+  public void FilesThatDontMatchIgnorePatternShouldNotBeIgnored(string path, string ignorePattern)
   {
     var patterns = IgnorePatternUtils.CompileIgnorePatterns([ignorePattern]);
 

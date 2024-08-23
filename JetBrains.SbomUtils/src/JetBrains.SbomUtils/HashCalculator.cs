@@ -1,18 +1,17 @@
 using System.Buffers;
 using System.Security.Cryptography;
+using System.Text;
 using JetBrains.SbomUtils.Models;
 
 namespace JetBrains.SbomUtils;
 
 public static class HashCalculator
 {
-  public static Dictionary<ChecksumAlgorithm, byte[]> ComputeHashes(Stream inputStream,
-    IEnumerable<ChecksumAlgorithm> algorithms)
+  public static Dictionary<ChecksumAlgorithm, byte[]> ComputeHashes(Stream inputStream, IEnumerable<ChecksumAlgorithm> algorithms)
   {
     Dictionary<ChecksumAlgorithm, HashAlgorithm>? hashes = null;
     try
     {
-
       hashes = algorithms.ToDictionary(a => a, CreateHashAlgorithm);
 
       byte[] buffer = ArrayPool<byte>.Shared.Rent(4096);
@@ -47,4 +46,16 @@ public static class HashCalculator
     ChecksumAlgorithm.SHA512 => SHA512.Create(),
     _ => throw new NotSupportedException($"Hash algorithm {algorithm} is not supported"),
   };
+
+  public static string ToSbomHash(byte[] hash)
+  {
+    StringBuilder builder = new();
+
+    foreach (var b in hash)
+    {
+      builder.Append(b.ToString("x2"));
+    }
+
+    return builder.ToString();
+  }
 }

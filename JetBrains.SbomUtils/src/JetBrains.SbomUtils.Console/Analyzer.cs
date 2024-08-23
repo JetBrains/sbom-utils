@@ -19,17 +19,33 @@ class Analyzer
     SbomReader reader = new SbomReader(_logger);
     var sbomModel = reader.LoadSbom(reader.ReadSbom(sbom));
 
-    var validationResult = validator.ValidateInstallation(sbomModel, CreateDiskOperations(rootDirectory), rootPackages, exemptions);
+    ValidationResult validationResult;
+
+    try
+    {
+      using var softwareProvider = CreateInstalledSoftwareProvider(rootDirectory);
+      validationResult = validator.ValidateInstallation(sbomModel, softwareProvider, rootPackages, exemptions);
+    }
+    catch (Exception ex)
+    {
+      validationResult = new ValidationResult(
+        success: false,
+        errorMessage: ex.Message,
+        filesChecked: 0,
+        filesMissingInSbom: [],
+        fileVerificationResults: [],
+        ignoredFiles: []);
+    }
 
     PrintValidationResult(validationResult);
 
     return validationResult.Success ? 0 : 1;
   }
 
-  protected IDiskOperations CreateDiskOperations(string path)
+  protected IInstalledSoftwareProvider CreateInstalledSoftwareProvider(string path)
   {
-    if (ZipArchiveDiskOperations.IsSupported(path)) return new ZipArchiveDiskOperations(path);
-    if (DiskOperations.IsSupported(path)) return new DiskOperations(path);
+    if (ZipArchiveSoftwareProvider.IsSupported(path)) return new ZipArchiveSoftwareProvider(path);
+    if (DirectorySoftwareProvider.IsSupported(path)) return new DirectorySoftwareProvider(path);
 
     throw new Exception($"Unsupported disk operation: {path}");
   }
@@ -48,8 +64,8 @@ class Analyzer
       ValidationResult validationResult;
       try
       {
-        validationResult = validator.ValidateInstallation(sbomModel, CreateDiskOperations(product.RootDirectory), product.RootPackages,
-          batchVerificationParams.Ignores);
+        using var softwareProvider = CreateInstalledSoftwareProvider(product.RootDirectory);
+        validationResult = validator.ValidateInstallation(sbomModel, softwareProvider, product.RootPackages, batchVerificationParams.Ignores);
       }
       catch (Exception ex)
       {
@@ -57,9 +73,9 @@ class Analyzer
           success: false,
           errorMessage: ex.Message,
           filesChecked: 0,
-          filesMissingInSbom: ReadOnlyCollection<MissingFile>.Empty,
-          fileVerificationResults: ReadOnlyCollection<FileVerificationResult>.Empty,
-          ignoredFiles: ReadOnlyCollection<string>.Empty);
+          filesMissingInSbom: [],
+          fileVerificationResults: [],
+          ignoredFiles: []);
       }
 
       PrintValidationResult(validationResult);
@@ -114,7 +130,7 @@ class Analyzer
       _logger.LogInformation(
         "Validation of product successfully passed, {present} files were checked, {ignored} files were ignored",
         validationResult.FilesChecked,
-        validationResult.IgnoredFiles.Count);
+        validationResult.IgnoredFiles.Length);
     }
     else
     {
@@ -123,12 +139,12 @@ class Analyzer
       else
         _logger.LogWarning(
           "Validation of product failed: {missing} files are missing, {hashMismatches} files has hash mismatches, {unreferenced} files found in unreferenced packages, {total} files were checked, {passed} files passed validation, {ignored} files were ignored",
-          validationResult.FilesMissingInSbom.Count,
+          validationResult.FilesMissingInSbom.Length,
           hashMismatches,
           filesFromUnreferencedPackages,
           validationResult.FilesChecked,
           validationResult.FileVerificationResults.Count(f => f.Success),
-          validationResult.IgnoredFiles.Count);
+          validationResult.IgnoredFiles.Length);
     }
   }
 }

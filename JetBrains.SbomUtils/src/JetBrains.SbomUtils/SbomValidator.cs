@@ -20,10 +20,12 @@ namespace JetBrains.SbomUtils
       _sbomOperations = sbomOperations;
     }
 
-    public ValidationResult ValidateInstallation(SbomModel sbomModel, IDiskOperations diskOperations, ICollection<string> rootPackageNames, ICollection<string> exceptions)
+    public ValidationResult ValidateInstallation(SbomModel sbomModel, IInstalledSoftwareProvider installedSoftwareProvider, ICollection<string> rootPackageNames, ICollection<string> exceptions, ValidationOptions? validationOptions = null)
     {
       if (sbomModel == null)
         throw new InvalidOperationException("Load an spdx document first");
+
+      validationOptions ??= new ValidationOptions();
 
       ICollection<Package> productPackages;
 
@@ -44,21 +46,21 @@ namespace JetBrains.SbomUtils
       _logger.LogDebug("{count} dependent packages were collected", productPackages.Count);
 
       var packagesHashSet = productPackages.ToHashSet();
-      var (installationFiles, ignoredFiles) = diskOperations.GetFilesFromInstallationDirectory(exceptions);
+      var (installationFiles, ignoredFiles) = installedSoftwareProvider.GetFiles(exceptions);
 
       ConcurrentBag<MissingFile> missingFiles = new ConcurrentBag<MissingFile>();
       ConcurrentBag<FileVerificationResult> fileVerificationResults = new ConcurrentBag<FileVerificationResult>();
 
       ParallelOptions parallelOptions = new ParallelOptions()
       {
-        MaxDegreeOfParallelism = 1,
+        MaxDegreeOfParallelism = validationOptions.Threads,
       };
 
       Parallel.ForEach(installationFiles, parallelOptions, (installationFile, token) =>
       {
         if (sbomModel.FilesDictionaryByRelativePath.TryGetValue(installationFile, out var sbomFiles))
         {
-          var fileValidationResult = ValidateFile(diskOperations, installationFile, sbomFiles, packagesHashSet);
+          var fileValidationResult = ValidateFile(installedSoftwareProvider, installationFile, sbomFiles, packagesHashSet);
 
           fileVerificationResults.Add(fileValidationResult);
         }
@@ -77,19 +79,19 @@ namespace JetBrains.SbomUtils
         success: !(missingFiles.Any() || fileVerificationResults.Any(f => !f.Success)),
         errorMessage: null,
         filesChecked: installationFiles.Count,
-        ignoredFiles: ignoredFiles,
+        ignoredFiles: ignoredFiles.ToArray(),
         filesMissingInSbom: missingFiles.ToArray(),
         fileVerificationResults: fileVerificationResults.ToArray());
 
       return validationResult;
     }
 
-    private FileVerificationResult ValidateFile(IDiskOperations diskOperations, string installationFile, List<FileInfo> sbomFiles, HashSet<Package> packagesHashSet)
+    private FileVerificationResult ValidateFile(IInstalledSoftwareProvider installedSoftwareProvider, string installationFile, List<FileInfo> sbomFiles, HashSet<Package> packagesHashSet)
     {
       var filesFromReferencedPackages = sbomFiles.Where(f => packagesHashSet.Contains(f.Package)).ToList();
       var hashAlgorithms = sbomFiles.SelectMany(f => f.File.Checksums).Select(c => c.Algorithm).Distinct();
 
-      var hashesDictionary = diskOperations.CalculateHashes(installationFile, hashAlgorithms);
+      var hashesDictionary = installedSoftwareProvider.CalculateFileHashes(installationFile, hashAlgorithms);
 
       if (filesFromReferencedPackages.Any())
       {
@@ -144,7 +146,7 @@ namespace JetBrains.SbomUtils
           mismatches.Add(new HashMismatch(fileChecksum, hashOnDisk));
       }
 
-      return mismatches.Any() ? new HashVerificationFailure(fileInfo, mismatches) : null;
+      return mismatches.Any() ? new HashVerificationFailure(fileInfo, mismatches.ToArray()) : null;
     }
 
     protected byte[] ParseHashValue(string hash)
